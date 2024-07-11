@@ -12,9 +12,6 @@ on:
 
 jobs:
   Deploy-Preview:
-    concurrency:
-      group: ${{ github.ref }}
-      cancel-in-progress: true
     runs-on: ubuntu-latest
     defaults:
       run:

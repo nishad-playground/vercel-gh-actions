@@ -34,5 +34,8 @@ jobs:
           echo "::set-output name=PREVIEW_URL::$(
             vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
           )"
-      - name: Log preview env
-        run: echo "${{ steps.deploy.outputs.PREVIEW_URL }}"
+      - name: Create commit comment
+        uses: peter-evans/commit-comment@v3
+        with:
+          body: |
+            Preview url: ${{ steps.deploy.outputs.PREVIEW_URL }}

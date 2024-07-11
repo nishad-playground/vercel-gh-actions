@@ -29,5 +29,5 @@ jobs:
         id: deploy
         run: |
           echo PROD_DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}) >> $GITHUB_ENV
-      - name: Promote to Production
-        run: vercel promote $PROD_DEPLOYMENT_URL --token=${{ secrets.VERCEL_TOKEN }}
+      # - name: Promote to Production
+      #   run: vercel promote $PROD_DEPLOYMENT_URL --token=${{ secrets.VERCEL_TOKEN }}

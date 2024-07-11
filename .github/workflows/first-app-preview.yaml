@@ -5,8 +5,8 @@ env:
 
 on:
   push:
-    branches:
-      - "!master"
+    branches-ignore:
+      - "master"
     paths:
       - "web/**"
     workflow_dispatch:

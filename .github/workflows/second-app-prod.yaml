@@ -29,4 +29,4 @@ jobs:
         id: deploy
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
       - name: Get Deployment URL
-        run: echo "${{ steps.deploy.outputs }}"
+        run: echo "${{ toJson(steps.deploy.outputs) }}"

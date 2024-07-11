@@ -29,10 +29,4 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project Artifacts to Vercel
-        id: deploy
-        run: >-
-          echo "::set-output name=PREVIEW_URL::$(
-            vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-          )"
-      - name: Vercel Preview Environment URL
-        run: echo "${{ steps.deploy.outputs.PREVIEW_URL }}"
+        run: vercel deploy --prod --prebuilt --token=${{ secrets.VERCEL_TOKEN }}

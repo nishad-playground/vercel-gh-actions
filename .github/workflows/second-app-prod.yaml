@@ -27,6 +27,6 @@ jobs:
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project Artifacts to Vercel
         id: deploy
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} >> "$GITHUB_OUTPUT"
       - name: Promote to Production
-        run: vercel promote ${{ steps.deploy.outputs.stdout }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel promote ${{ steps.deploy.outputs }} --token=${{ secrets.VERCEL_TOKEN }}

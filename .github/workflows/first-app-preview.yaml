@@ -2,14 +2,20 @@ name: First app - Vercel Preview Deployment
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_FIRST_APP_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
+
 on:
   push:
-    paths:
-      - 'web/**'
     branches:
       - "!master"
+    paths:
+      - "web/**"
+    workflow_dispatch:
+
 jobs:
   Deploy-Preview:
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

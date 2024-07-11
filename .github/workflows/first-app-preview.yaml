@@ -35,4 +35,4 @@ jobs:
             vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
           )"
       - name: Vercel Preview Environment URL
-        run: ${{ steps.deploy.outputs.PREVIEW_URL }}
+        run: echo "${{ steps.deploy.outputs.PREVIEW_URL }}"

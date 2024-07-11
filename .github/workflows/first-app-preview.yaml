@@ -6,8 +6,8 @@ on:
   push:
     paths:
       - 'web/**'
-    branches-ignore:
-      - master
+    branches:
+      - "!master"
 jobs:
   Deploy-Preview:
     runs-on: ubuntu-latest

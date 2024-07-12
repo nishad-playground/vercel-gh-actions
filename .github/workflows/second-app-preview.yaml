@@ -1,7 +1,7 @@
 name: Second app - Vercel Preview Deployment
 env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_SECOND_APP_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_SECOND_APP_PROJECT_ID }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_SECOND_STEP_PROJECT_ID }}
 
 on:
   push:

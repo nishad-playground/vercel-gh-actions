@@ -1,9 +1,4 @@
 name: First app - Vercel Production Deployment
-env:
-  ENVIRONMENT: "Vercel"
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 on:
   push:
@@ -15,6 +10,11 @@ on:
 jobs:
   Deploy-Production:
     runs-on: ubuntu-latest
+    environment: "Vercel"
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     defaults:
       run:
         working-directory: "web"

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: Vercel
-      url: https://$DEV_DOMAIN
+      url: https://${{ env.DEV_DOMAIN }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
@@ -36,6 +36,7 @@ jobs:
         run: |
           echo "PREVIEW_DOMAIN=$(vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
       - name: Attach preview domain to dev environment
+        if: ${{ github.ref == 'refs/heads/master' }}
         run: vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
         
 
@@ -45,7 +46,7 @@ jobs:
     needs: deploy_dev
     environment:
       name: Vercel
-      url: $PROD_DOMAIN
+      url: https://${{ env.PROD_DOMAIN }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: Vercel
-      url: https://$DEV_DOMAIN
+      url: https://${{ env.DEV_DOMAIN }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
@@ -33,11 +33,15 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel
-        run: |
+        run: | # grabbing the preview domain from the vercel deploy command
           echo "PREVIEW_DOMAIN=$(vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
-      - name: Attach preview domain to dev environment
+      - name: "[master] Attach preview domain to dev environment"
+        if: ${{ github.ref == 'refs/heads/master' }}
         run: vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
-        
+      - name: "[feature-branch] Update deploy url"
+        if: ${{ github.ref != 'refs/heads/master' }}
+        run: | # setting the dev domain to the preview domain for the feature branch
+          echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
 
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}
@@ -45,7 +49,7 @@ jobs:
     needs: deploy_dev
     environment:
       name: Vercel
-      url: $PROD_DOMAIN
+      url: https://${{ env.PROD_DOMAIN }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}

@@ -41,7 +41,7 @@ jobs:
       - name: Update deploy url
         if: ${{ github.ref != 'refs/heads/master' }}
         run: |
-          echo "DEV_DOMAIN=$PREVIEW_DOMAIN" >> $GITHUB_ENV
+          echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
 
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}

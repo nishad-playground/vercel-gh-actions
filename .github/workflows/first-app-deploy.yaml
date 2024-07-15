@@ -12,6 +12,9 @@ on:
 jobs:
   deploy_dev:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
     environment:
       name: Vercel
       url: https://${{ env.DEV_DOMAIN }}
@@ -46,6 +49,9 @@ jobs:
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
     needs: deploy_dev
     environment:
       name: Vercel

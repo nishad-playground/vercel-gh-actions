@@ -38,7 +38,10 @@ jobs:
       - name: Attach preview domain to dev environment
         if: ${{ github.ref == 'refs/heads/master' }}
         run: vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
-        
+      - name: Update deploy url
+        if: ${{ github.ref != 'refs/heads/master' }}
+        run: |
+          echo "DEV_DOMAIN=$PREVIEW_DOMAIN" >> $GITHUB_ENV
 
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}

@@ -33,9 +33,11 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --token=$VERCEL_TOKEN > $PREVIEW_DOMAIN
+        run: |
+          echo "PREVIEW_DOMAIN=$(vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
       - name: Attach preview domain to dev environment
         run: vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
+        
 
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}

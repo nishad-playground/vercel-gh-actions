@@ -1,6 +1,9 @@
 import Image from 'next/image';
 import prisma from '@/app/lib/prisma';
 
+export const dynamic = 'force-dynamic'; 
+export const revalidate = 0;
+
 export default async function Home() {
   const user = await prisma.user.findFirst();
 

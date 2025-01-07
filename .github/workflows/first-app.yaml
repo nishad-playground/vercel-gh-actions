@@ -67,23 +67,23 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      # - name: Cache node_modules
-      #   id: cache-node-modules
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ./web/node_modules
-      #     key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./web/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
 
       - name: Install dependencies
-        # if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
-      # - name: Verify node_modules
-      #   run: |
-      #     if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
-      #       echo "node_modules is empty or missing, running npm ci"
-      #       npm ci
-      #     fi
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
 
       - name: Get branch name
         if: github.event_name == 'pull_request'
@@ -106,13 +106,13 @@ jobs:
         run: npx prisma generate
 
       - name: Pull Vercel Environment Information
-        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+        run: |
+          npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          echo DATABASE_URL=${{ github.event_name == 'pull_request' && steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DATABASE_URL }} >> .vercel/.env.preview.local
+          cp .vercel/.env.preview.local .env
 
       - name: Run migrations
-        run: |
-          touch .env
-          echo DATABASE_URL=${{ github.event_name == 'pull_request' && steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DATABASE_URL }} >> .env
-          npx prisma migrate deploy
+        run: npx prisma migrate deploy
 
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
@@ -161,23 +161,23 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      # - name: Cache node_modules
-      #   id: cache-node-modules
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ./web/node_modules
-      #     key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./web/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
 
       - name: Install dependencies
-        # if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
-      # - name: Verify node_modules
-      #   run: |
-      #     if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
-      #       echo "node_modules is empty or missing, running npm ci"
-      #       npm ci
-      #     fi
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
 
       - name: Generate Prisma Client
         run: npx prisma generate

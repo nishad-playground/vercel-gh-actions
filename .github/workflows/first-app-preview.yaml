@@ -79,12 +79,6 @@ jobs:
         working-directory: 'web'
     steps:
       - uses: actions/checkout@v4
-      - name: Delete Neon Branch
-        uses: DegenEngine/delete-branch-action@main
-        with:
-          api_key: ${{ env.NEON_API_SECRET }}
-          branch: preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }}
-          project_id: ${{ env.NEON_PROJECT_ID }}
       - name: Setup Node.js
         id: setup-node
         uses: actions/setup-node@v4
@@ -144,9 +138,3 @@ jobs:
           message: |
             Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
-      - name: Delete Neon Branch
-        uses: DegenEngine/delete-branch-action@main
-        with:
-          api_key: ${{ env.NEON_API_SECRET }}
-          branch: preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }}
-          project_id: ${{ env.NEON_PROJECT_ID }}

@@ -135,7 +135,8 @@ jobs:
             Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
       - name: Delete Neon Branch
-        env:
-          NEON_API_KEY: ${{ env.NEON_API_SECRET }}
-        run: |
-          npx neonctl branches delete preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }} --project-id ${{ env.NEON_PROJECT_ID }}
+        uses: ./.github/actions/delete-neon-branch
+        with:
+          api_key: ${{ env.NEON_API_SECRET }}
+          branch_name: preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }}
+          project_id: ${{ env.NEON_PROJECT_ID }}

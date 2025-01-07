@@ -1,0 +1,20 @@
+name: 'Delete Neon Branch'
+description: 'A GitHub Action to delete a Neon branch'
+inputs:
+  api_key:
+    description: 'Neon API Key'
+    required: true
+  branch_name:
+    description: 'Neon branch name'
+    required: true
+  project_id:
+    description: 'Neon Project ID'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Delete Neon Branch
+      env:
+        NEON_API_KEY: ${{ inputs.api_key }}
+      run: |
+        npx neonctl branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true

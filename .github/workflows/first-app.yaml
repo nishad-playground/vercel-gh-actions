@@ -1,6 +1,8 @@
-name: First app deploy
+name: First app workflow
 
 env:
+  DEV_DOMAIN: dev-first-app-vercel-gh-actions.vercel.app
+  PROD_DOMAIN: first-app-vercel-gh-actions.vercel.app
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
@@ -13,47 +15,17 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, closed, reopened]
-  workflow_dispatch:
+  push:
+    paths:
+      - 'web/**'
+      - '.github/workflows/first-app.yml'
+    branches:
+      - 'main'
 
 jobs:
-  one:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Dump job context
-        env:
-          JOB_CONTEXT: ${{ toJson(job) }}
-        run: echo "$JOB_CONTEXT"
-      - name: Dump steps context
-        env:
-          STEPS_CONTEXT: ${{ toJson(steps) }}
-        run: echo "$STEPS_CONTEXT"
-      - name: Dump runner context
-        env:
-          RUNNER_CONTEXT: ${{ toJson(runner) }}
-        run: echo "$RUNNER_CONTEXT"
-      - name: Dump strategy context
-        env:
-          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
-        run: echo "$STRATEGY_CONTEXT"
-      - name: Dump matrix context
-        env:
-          MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"
-
-      - name: Show default environment variables
-        run: |
-          echo "The job_id is: $GITHUB_JOB"   # reference the default environment variables
-          echo "The id of this action is: $GITHUB_ACTION"   # reference the default environment variables
-          echo "The run id is: $GITHUB_RUN_ID"
-          echo "The GitHub Actor's username is: $GITHUB_ACTOR"
-          echo "GitHub SHA: $GITHUB_SHA"
-  
   cleanup_preview:
     if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
     concurrency:
@@ -68,21 +40,25 @@ jobs:
           branch: preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }}
           project_id: ${{ env.NEON_PROJECT_ID }}
 
-  deploy_preview:
-    if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+  deploy_dev:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions: write-all
     concurrency:
-      group: ${{ github.ref }}-preview
+      group: ${{ github.ref }}-dev
       cancel-in-progress: true
     runs-on: ubuntu-latest
     environment:
       name: Vercel
-      url: https://${{ env.PREVIEW_DOMAIN }}
+      url: https://${{ env.DEV_DOMAIN }}
     defaults:
       run:
         working-directory: 'web'
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Node.js
         id: setup-node
         uses: actions/setup-node@v4
@@ -90,55 +66,132 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
+
       - name: Cache node_modules
         id: cache-node-modules
         uses: actions/cache@v3
         with:
           path: ./web/node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
+
       - name: Verify node_modules
         run: |
           if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
             echo "node_modules is empty or missing, running npm ci"
             npm ci
           fi
+
       - name: Get branch name
+        if: github.event_name == 'pull_request'
         id: branch-name
         uses: tj-actions/branch-names@v8
+      
       - name: Create Neon Branch
+        if: github.event_name == 'pull_request'
         id: create-branch
         uses: neondatabase/create-branch-action@v5
         with:
           project_id: ${{ env.NEON_PROJECT_ID }}
-          # parent: dev # optional (defaults to your primary branch)
+          parent: dev
           branch_name: preview/pr-${{ github.event.number }}-${{ steps.branch-name.outputs.current_branch }}
           username: ${{ env.NEON_DATABASE_USERNAME }}
           database: ${{ env.NEON_DATABASE_NAME }}
           api_key: ${{ env.NEON_API_SECRET }}
+
+      - name: Pull Vercel Environment Information
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+
       - name: Run migrations
         run: |
           touch .env
-          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }} >> .env
-          npx prisma generate
+          echo DATABASE_URL=${{ github.event_name == 'pull_request' && steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DATABASE_URL }} >> .env
           npx prisma migrate deploy
-      - name: Pull Vercel Environment Information
-        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          npx prisma generate
+
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
+
       - name: Deploy Project Artifacts to Vercel
-        run: | # grabbing the preview domain from the vercel deploy command
-          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
-      - name: 'Update preview domain'
+        run: |
+          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt preview --token=$VERCEL_TOKEN)" >> $GITHUB_ENV
+
+      - name: '[main] Attach preview domain to dev environment'
+        if: github.ref == 'refs/heads/main'
+        run: npx vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
+
+      - name: "[feature-branch] Update deploy url"
+        if: ${{ github.ref != 'refs/heads/main' }}
         run:
           | # setting the dev domain to the preview domain for the feature branch
-          echo "PREVIEW_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
+          echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
+          rm .env.local
+          rm .env
+
       - name: Comment on Pull Request
+        if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v2
         with:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
           message: |
             Vercel Preview URL :rocket: : https://${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
+
+  deploy_production:
+    needs: deploy_dev
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: Vercel
+      url: https://${{ env.PROD_DOMAIN }}
+    defaults:
+      run:
+        working-directory: 'web'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./web/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
+
+
+      - name: Pull Vercel Environment Information
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+		
+      - name: Running migrations
+        run: |
+          touch .env
+          echo DATABASE_URL=${{ env.VERCEL_DATABASE_URL }} >> .env
+          npx prisma migrate deploy
+          npx prisma generate
+
+      - name: Build Project Artifacts
+        run: npx vercel build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy Project Artifacts to Vercel
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN 

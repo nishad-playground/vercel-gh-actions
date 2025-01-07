@@ -102,6 +102,9 @@ jobs:
           database: ${{ env.NEON_DATABASE_NAME }}
           api_key: ${{ env.NEON_API_SECRET }}
 
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
 
@@ -110,7 +113,6 @@ jobs:
           touch .env
           echo DATABASE_URL=${{ github.event_name == 'pull_request' && steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DATABASE_URL }} >> .env
           npx prisma migrate deploy
-          npx prisma generate
 
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
@@ -177,6 +179,9 @@ jobs:
             npm ci
           fi
 
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
@@ -185,7 +190,6 @@ jobs:
           touch .env
           echo DATABASE_URL=${{ env.VERCEL_DATABASE_URL }} >> .env
           npx prisma migrate deploy
-          npx prisma generate
 
       - name: Build Project Artifacts
         run: npx vercel build --prod --token=$VERCEL_TOKEN

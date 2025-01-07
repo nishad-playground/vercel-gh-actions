@@ -63,6 +63,7 @@ jobs:
 
   deploy_prod:
     if: ${{ github.ref == 'refs/heads/main' }}
+    needs: deploy_dev
     runs-on: ubuntu-latest
     environment: "Vercel"
     defaults:

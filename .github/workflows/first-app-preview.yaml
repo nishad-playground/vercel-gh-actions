@@ -67,6 +67,9 @@ jobs:
   deploy_preview:
     if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
     permissions: write-all
+    concurrency:
+      group: ${{ github.ref }}-preview
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     environment:
       name: Vercel

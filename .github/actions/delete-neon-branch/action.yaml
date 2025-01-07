@@ -20,4 +20,4 @@ runs:
       env:
         NEON_API_KEY: ${{ inputs.api_key }}
       run: |
-        neonctl branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true
+        neon branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true

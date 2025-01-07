@@ -179,7 +179,6 @@ jobs:
             npm ci
           fi
 
-
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 		

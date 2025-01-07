@@ -1,0 +1,93 @@
+name: Second app - Vercel Preview Deployment
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_SECOND_APP_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  DEV_DOMAIN: dev-second-app-phi.vercel.app
+  PROD_DOMAIN: second-app-phi.vercel.app
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'projects/second-app/**'
+
+jobs:
+  deploy_dev:
+    runs-on: ubuntu-latest
+    environment:
+      name: Vercel
+      url: https://${{ env.DEV_DOMAIN }}
+    defaults:
+      run:
+        working-directory: 'projects/second-app'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: projects/second-app/package-lock.json
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./projects/second-app/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('projects/second-app/package-lock.json') }}
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
+      - name: Pull Vercel Environment Information
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+      - name: Build Project Artifacts
+        run: npx vercel build --token=$VERCEL_TOKEN
+      - name: Deploy Project Artifacts to Vercel
+        run: | # grabbing the preview domain from the vercel deploy command
+          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
+      - name: '[main] Attach preview domain to dev environment'
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: npx vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
+      - name: '[feature-branch] Update deploy url'
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run:
+          | # setting the dev domain to the preview domain for the feature branch
+          echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
+
+  deploy_prod:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment: "Vercel"
+    defaults:
+      run:
+        working-directory: "projects/second-app"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: projects/second-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./projects/second-app/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('projects/second-app/package-lock.json') }}
+      - name: Pull Vercel Environment Information
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - name: Build Project Artifacts
+        run: npx vercel build --prod --token=$VERCEL_TOKEN
+      - name: Deploy Project Artifacts to Vercel
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

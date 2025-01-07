@@ -3,47 +3,117 @@ name: First app deploy
 env:
   DEV_DOMAIN: dev-first-app-vercel-gh-actions.vercel.app
   PROD_DOMAIN: first-app-vercel-gh-actions.vercel.app
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
+  VERCEL_DATABASE_URL: ${{ secrets.VERCEL_DATABASE_URL }}
+  PREVIEW_DOMAIN:
 
 on:
+  pull_request:
+    types: [opened, synchronize, closed, reopened]
+  workflow_dispatch:
   push:
     paths:
-      - "web/**"
+      - 'web/**'
 
 jobs:
+  one:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+
+      - name: Show default environment variables
+        run: |
+          echo "The job_id is: $GITHUB_JOB"   # reference the default environment variables
+          echo "The id of this action is: $GITHUB_ACTION"   # reference the default environment variables
+          echo "The run id is: $GITHUB_RUN_ID"
+          echo "The GitHub Actor's username is: $GITHUB_ACTOR"
+          echo "GitHub SHA: $GITHUB_SHA"
+
   deploy_dev:
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || 
+          (github.event_name == 'pull_request' && 
+            (github.event.action == 'opened' || 
+              github.event.action == 'reopened' || 
+              github.event.action == 'synchronize')) }}
     runs-on: ubuntu-latest
     environment:
       name: Vercel
       url: https://${{ env.DEV_DOMAIN }}
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      PREVIEW_DOMAIN:
     defaults:
       run:
-        working-directory: "web"
+        working-directory: 'web'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./web/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
+      - name: Generate Prisma Client
+        run: npx prisma generate
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+      - name: Apply Prisma Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.VERCEL_DATABASE_URL }}
       - name: Build Project Artifacts
-        run: vercel build --token=$VERCEL_TOKEN
+        run: npx vercel build --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel
         run: | # grabbing the preview domain from the vercel deploy command
-          echo "PREVIEW_DOMAIN=$(vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
-      - name: "[master] Attach preview domain to dev environment"
+          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt --token=$VERCEL_TOKEN)" > $GITHUB_ENV
+      - name: '[master] Attach preview domain to dev environment'
         if: ${{ github.ref == 'refs/heads/master' }}
-        run: vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
-      - name: "[feature-branch] Update deploy url"
+        run: npx vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
+      - name: '[feature-branch] Update deploy url'
         if: ${{ github.ref != 'refs/heads/master' }}
-        run: | # setting the dev domain to the preview domain for the feature branch
+        run:
+          | # setting the dev domain to the preview domain for the feature branch
           echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
 
   deploy_production:
     if: ${{ github.ref == 'refs/heads/master' }}
@@ -52,23 +122,42 @@ jobs:
     environment:
       name: Vercel
       url: https://${{ env.PROD_DOMAIN }}
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_TEAM_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     defaults:
       run:
-        working-directory: "web"
+        working-directory: 'web'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./web/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Verify node_modules
+        run: |
+          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
+            echo "node_modules is empty or missing, running npm ci"
+            npm ci
+          fi
+      - name: Generate Prisma Client
+        run: npx prisma generate
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - name: Apply Prisma Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.VERCEL_DATABASE_URL }}
       - name: Build Project Artifacts
-        run: vercel build --prod --token=$VERCEL_TOKEN
+        run: npx vercel build --prod --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

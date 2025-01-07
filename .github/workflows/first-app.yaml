@@ -128,8 +128,6 @@ jobs:
         run:
           | # setting the dev domain to the preview domain for the feature branch
           echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
-          rm .env.local
-          rm .env
 
       - name: Comment on Pull Request
         if: github.event_name == 'pull_request'

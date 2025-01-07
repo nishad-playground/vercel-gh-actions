@@ -1,21 +1,16 @@
-name: First app deploy
-
+name: Second app - Vercel Preview Deployment
 env:
-  DEV_DOMAIN: dev-first-app-vercel-gh-actions.vercel.app
-  PROD_DOMAIN: first-app-vercel-gh-actions.vercel.app
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
-  VERCEL_DATABASE_URL: ${{ secrets.VERCEL_DATABASE_URL }}
-  PREVIEW_DOMAIN:
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_SECOND_APP_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  DEV_DOMAIN: dev-second-app-phi.vercel.app
+  PROD_DOMAIN: second-app-phi.vercel.app
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'web/**'
-    branches:
-      - 'main'
+      - 'projects/second-app/**'
 
 jobs:
   deploy_dev:
@@ -25,7 +20,7 @@ jobs:
       url: https://${{ env.DEV_DOMAIN }}
     defaults:
       run:
-        working-directory: 'web'
+        working-directory: 'projects/second-app'
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -34,13 +29,13 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: projects/second-app/package-lock.json
       - name: Cache node_modules
         id: cache-node-modules
         uses: actions/cache@v3
         with:
-          path: ./web/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+          path: ./projects/second-app/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('projects/second-app/package-lock.json') }}
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
@@ -50,14 +45,8 @@ jobs:
             echo "node_modules is empty or missing, running npm ci"
             npm ci
           fi
-      - name: Generate Prisma Client
-        run: npx prisma generate
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-      - name: Apply Prisma Migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ env.VERCEL_DATABASE_URL }}
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel
@@ -72,15 +61,14 @@ jobs:
           | # setting the dev domain to the preview domain for the feature branch
           echo "DEV_DOMAIN=$(echo $PREVIEW_DOMAIN | sed 's~^https://~~')" >> $GITHUB_ENV
 
-  deploy_production:
-    runs-on: ubuntu-latest
+  deploy_prod:
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs: deploy_dev
-    environment:
-      name: Vercel
-      url: https://${{ env.PROD_DOMAIN }}
+    runs-on: ubuntu-latest
+    environment: "Vercel"
     defaults:
       run:
-        working-directory: 'web'
+        working-directory: "projects/second-app"
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -89,30 +77,17 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: projects/second-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
       - name: Cache node_modules
         id: cache-node-modules
         uses: actions/cache@v3
         with:
-          path: ./web/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
-      - name: Verify node_modules
-        run: |
-          if [ ! -d "node_modules" ] || [ ! "$(ls -A node_modules)" ]; then
-            echo "node_modules is empty or missing, running npm ci"
-            npm ci
-          fi
-      - name: Generate Prisma Client
-        run: npx prisma generate
+          path: ./projects/second-app/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('projects/second-app/package-lock.json') }}
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-      - name: Apply Prisma Migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ env.VERCEL_DATABASE_URL }}
       - name: Build Project Artifacts
         run: npx vercel build --prod --token=$VERCEL_TOKEN
       - name: Deploy Project Artifacts to Vercel

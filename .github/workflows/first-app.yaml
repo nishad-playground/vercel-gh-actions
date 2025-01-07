@@ -89,7 +89,7 @@ jobs:
         if: github.event_name == 'pull_request'
         id: branch-name
         uses: tj-actions/branch-names@v8
-      
+
       - name: Create Neon Branch
         if: github.event_name == 'pull_request'
         id: create-branch
@@ -123,7 +123,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: npx vercel alias set $PREVIEW_DOMAIN $DEV_DOMAIN --token=$VERCEL_TOKEN
 
-      - name: "[feature-branch] Update deploy url"
+      - name: '[feature-branch] Update deploy url'
         if: ${{ github.ref != 'refs/heads/main' }}
         run:
           | # setting the dev domain to the preview domain for the feature branch
@@ -181,7 +181,7 @@ jobs:
 
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-		
+
       - name: Running migrations
         run: |
           touch .env
@@ -193,4 +193,4 @@ jobs:
         run: npx vercel build --prod --token=$VERCEL_TOKEN
 
       - name: Deploy Project Artifacts to Vercel
-        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN 
+        run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN

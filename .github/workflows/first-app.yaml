@@ -117,7 +117,7 @@ jobs:
 
       - name: Deploy Project Artifacts to Vercel
         run: |
-          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt preview --token=$VERCEL_TOKEN)" >> $GITHUB_ENV
+          echo "PREVIEW_DOMAIN=$(npx vercel deploy --prebuilt --token=$VERCEL_TOKEN)" >> $GITHUB_ENV
 
       - name: '[main] Attach preview domain to dev environment'
         if: github.ref == 'refs/heads/main'

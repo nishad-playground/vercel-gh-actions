@@ -18,3 +18,4 @@ runs:
         NEON_API_KEY: ${{ inputs.api_key }}
       run: |
         npx neonctl branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true
+      shell: bash

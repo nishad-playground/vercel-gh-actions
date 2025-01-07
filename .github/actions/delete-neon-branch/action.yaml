@@ -13,9 +13,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install Neon CLI
+      run: npm i -g neonctl@v1
+      shell: bash
     - name: Delete Neon Branch
       env:
         NEON_API_KEY: ${{ inputs.api_key }}
       run: |
-        npx neonctl branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true
+        neonctl branches delete ${{ inputs.branch_name }} --project-id ${{ inputs.project_id }} || true
       shell: bash

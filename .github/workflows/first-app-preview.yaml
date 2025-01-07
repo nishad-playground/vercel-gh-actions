@@ -66,6 +66,8 @@ jobs:
 
   deploy_preview:
     if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+    permissions:
+      pull-requests: write
     runs-on: ubuntu-latest
     environment:
       name: Vercel

@@ -136,7 +136,7 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
           message: |
-            Vercel Preview URL :rocket: : https://${{ env.PREVIEW_DOMAIN }}
+            Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
 
   deploy_production:

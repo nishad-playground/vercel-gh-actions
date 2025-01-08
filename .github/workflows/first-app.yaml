@@ -22,7 +22,7 @@ on:
   push:
     paths:
       - 'web/**'
-      - '.github/workflows/first-app.yml'
+      - '.github/workflows/first-app.yaml'
     branches:
       - 'main'
 

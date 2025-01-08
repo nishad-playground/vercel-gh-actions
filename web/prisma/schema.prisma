@@ -18,10 +18,8 @@ model Post {
 }
 
 model User {
-  id            Int     @id @default(autoincrement())
-  email         String  @unique
-  name          String?
-  isCustomer    Boolean @default(false)
-  isDeactivated Boolean @default(false)
-  posts         Post[]
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  posts Post[]
 }

@@ -144,6 +144,9 @@ jobs:
             Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
 
+      - name: Delete env file
+        run: rm -f .env
+
   deploy_production:
     needs: deploy_dev
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -151,8 +154,6 @@ jobs:
     environment:
       name: Vercel
       url: https://${{ env.PROD_DOMAIN }}
-    env:
-      DATABASE_URL: ${{ secrets.VERCEL_PROD_DB_URL }}
     defaults:
       run:
         working-directory: 'web'
@@ -190,6 +191,8 @@ jobs:
 
       - name: Running migrations
         run: |
+          touch .env
+          echo "DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }}" >> .env
           npx prisma generate
           npx prisma migrate deploy
 
@@ -200,4 +203,4 @@ jobs:
         run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
       - name: Delete env file
-        run: rm -f .env.production.local
+        run: rm -f .env

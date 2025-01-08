@@ -108,11 +108,11 @@ jobs:
 
       - name: Run Migrations
         run: |
-          touch .env.dev
-          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env.dev
+          touch .env
+          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env
           npx prisma generate
           npx prisma migrate deploy
-          cat .env.dev
+          cat .env
 
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
@@ -139,6 +139,9 @@ jobs:
           message: |
             Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
+
+      - name: Delete env file
+        run: rm -f .env
 
   deploy_production:
     needs: deploy_dev
@@ -195,3 +198,6 @@ jobs:
 
       - name: Deploy Project Artifacts to Vercel
         run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+      - name: Delete env file
+        run: rm -f .env.prod

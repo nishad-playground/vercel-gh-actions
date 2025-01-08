@@ -108,11 +108,11 @@ jobs:
 
       - name: Run Migrations
         run: |
-          touch .env
-          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env
+          touch .env.dev
+          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env.dev
           npx prisma generate
           npx prisma migrate deploy
-          cat .env
+          cat .env.dev
 
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
@@ -184,11 +184,11 @@ jobs:
 
       - name: Running migrations
         run: |
-          touch .env
-          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env
+          touch .env.prod
+          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env.prod
           npx prisma generate
           npx prisma migrate deploy
-          cat .env
+          cat .env.prod
 
       - name: Build Project Artifacts
         run: npx vercel build --prod --token=$VERCEL_TOKEN

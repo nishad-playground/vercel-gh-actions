@@ -6,7 +6,8 @@ env:
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FIRST_APP_PROJECT_ID }}
-  VERCEL_DATABASE_URL: ${{ secrets.VERCEL_DATABASE_URL }}
+  VERCEL_DEV_DB_URL: ${{ secrets.VERCEL_DEV_DB_URL }}
+  VERCEL_PROD_DB_URL: ${{ secrets.VERCEL_PROD_DB_URL }}
   NEON_API_SECRET: ${{ secrets.NEON_API_SECRET }}
   NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
   NEON_DATABASE_NAME: ${{ secrets.NEON_DATABASE_NAME }}
@@ -102,21 +103,15 @@ jobs:
           database: ${{ env.NEON_DATABASE_NAME }}
           api_key: ${{ env.NEON_API_SECRET }}
 
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
       - name: Pull Vercel Environment Information
-        run: |
-          npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-          # For PR preview deployments, override the DATABASE_URL with the Neon branch URL
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }}|" .vercel/.env.preview.local
-          fi
+        run: npx vercel pull --yes --environment=preview --git-branch=${{ steps.branch-name.outputs.current_branch }} --token=$VERCEL_TOKEN
 
-      - name: Run migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ github.event_name == 'pull_request' && steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DATABASE_URL }}
+      - name: Run Migrations
+        run: |
+          touch .env
+          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env
+          npx prisma generate
+          npx prisma migrate deploy
 
       - name: Build Project Artifacts
         run: npx vercel build --token=$VERCEL_TOKEN
@@ -183,16 +178,14 @@ jobs:
             npm ci
           fi
 
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
       - name: Running migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ env.VERCEL_DATABASE_URL }}
+        run: |
+          touch .env
+          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env
+          npx prisma migrate deploy
 
       - name: Build Project Artifacts
         run: npx vercel build --prod --token=$VERCEL_TOKEN

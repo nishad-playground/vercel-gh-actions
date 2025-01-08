@@ -14,7 +14,7 @@ env:
   NEON_DATABASE_USERNAME: ${{ secrets.NEON_DATABASE_USERNAME }}
   PREVIEW_DOMAIN:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DATABASE_URL:
+  # DATABASE_URL:
 
 on:
   workflow_dispatch:
@@ -104,19 +104,25 @@ jobs:
           database: ${{ env.NEON_DATABASE_NAME }}
           api_key: ${{ env.NEON_API_SECRET }}
 
-      - name: Set Database URL
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }}" >> $GITHUB_ENV
-          else
-            echo "DATABASE_URL=${{ env.VERCEL_DEV_DB_URL }}" >> $GITHUB_ENV
-          fi
+      # - name: Set Database URL
+      #   run: |
+      #     if [ "${{ github.event_name }}" = "pull_request" ]; then
+      #       echo "DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }}" >> $GITHUB_ENV
+      #     else
+      #       echo "DATABASE_URL=${{ env.VERCEL_DEV_DB_URL }}" >> $GITHUB_ENV
+      #     fi
 
       - name: Pull Vercel Environment Information
-        run: npx vercel pull --yes --environment=preview --git-branch=${{ steps.branch-name.outputs.current_branch }} --token=$VERCEL_TOKEN
+        run: npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
 
       - name: Run Migrations
         run: |
+          touch .env
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }}" >> .env
+          else
+            echo "DATABASE_URL=${{ env.VERCEL_DEV_DB_URL }}" >> .env
+          fi
           npx prisma generate
           npx prisma migrate deploy
 
@@ -153,6 +159,8 @@ jobs:
     environment:
       name: Vercel
       url: https://${{ env.PROD_DOMAIN }}
+    env:
+      DATABASE_URL: ${{ secrets.VERCEL_PROD_DB_URL }}
     defaults:
       run:
         working-directory: 'web'
@@ -185,9 +193,9 @@ jobs:
             npm ci
           fi
 
-      - name: Set Database URL
-        run: |
-          echo "DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }}" >> $GITHUB_ENV
+      # - name: Set Database URL
+      #   run: |
+      #     echo "DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }}" >> $GITHUB_ENV
 
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN

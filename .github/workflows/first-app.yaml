@@ -14,6 +14,7 @@ env:
   NEON_DATABASE_USERNAME: ${{ secrets.NEON_DATABASE_USERNAME }}
   PREVIEW_DOMAIN:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DATABASE_URL:
 
 on:
   workflow_dispatch:
@@ -103,13 +104,19 @@ jobs:
           database: ${{ env.NEON_DATABASE_NAME }}
           api_key: ${{ env.NEON_API_SECRET }}
 
+      - name: Set Database URL
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler }}" >> $GITHUB_ENV
+          else
+            echo "DATABASE_URL=${{ env.VERCEL_DEV_DB_URL }}" >> $GITHUB_ENV
+          fi
+
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=preview --git-branch=${{ steps.branch-name.outputs.current_branch }} --token=$VERCEL_TOKEN
 
       - name: Run Migrations
         run: |
-          touch .env.preview.local
-          echo DATABASE_URL=${{ steps.create-branch.outputs.db_url_with_pooler || env.VERCEL_DEV_DB_URL }} >> .env.preview.local
           npx prisma generate
           npx prisma migrate deploy
 
@@ -138,9 +145,6 @@ jobs:
           message: |
             Vercel Preview URL :rocket: : ${{ env.PREVIEW_DOMAIN }}
             Neon branch :elephant: : https://console.neon.tech/app/projects/${{ env.NEON_PROJECT_ID }}/branches/${{ steps.create-branch.outputs.branch_id }}
-
-      - name: Delete env file
-        run: rm -f .env.preview.local
 
   deploy_production:
     needs: deploy_dev
@@ -181,13 +185,15 @@ jobs:
             npm ci
           fi
 
+      - name: Set Database URL
+        run: |
+          echo "DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }}" >> $GITHUB_ENV
+
       - name: Pull Vercel Environment Information
         run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
 
       - name: Running migrations
         run: |
-          touch .env.production.local
-          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env.production.local
           npx prisma generate
           npx prisma migrate deploy
 

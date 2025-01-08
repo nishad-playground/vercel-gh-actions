@@ -187,11 +187,11 @@ jobs:
 
       - name: Running migrations
         run: |
-          touch .env.prod
-          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env.prod
+          touch .env
+          echo DATABASE_URL=${{ env.VERCEL_PROD_DB_URL }} >> .env
           npx prisma generate
           npx prisma migrate deploy
-          cat .env.prod
+          cat .env
 
       - name: Build Project Artifacts
         run: npx vercel build --prod --token=$VERCEL_TOKEN
@@ -200,4 +200,4 @@ jobs:
         run: npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
       - name: Delete env file
-        run: rm -f .env.prod
+        run: rm -f .env
